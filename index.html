@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prototipe Fungsional - BICARA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
+        .phone-mockup { max-width: 420px; height: 880px; }
+        .phone-screen { position: relative; overflow: hidden; }
+        .app-screen {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s linear;
+            transform: translateX(100%); z-index: 1;
+            padding-top: 2rem; display: flex; flex-direction: column; opacity: 0;
+        }
+        .app-screen.active { transform: translateX(0); z-index: 2; opacity: 1; }
+        .app-screen.exit-left { transform: translateX(-50%); z-index: 1; opacity: 0; }
+        .scroll-container::-webkit-scrollbar { width: 4px; }
+        .scroll-container::-webkit-scrollbar-track { background: #1f2937; }
+        .scroll-container::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 2px; }
+        .lesson-bubble {
+            width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            position: relative; cursor: pointer; transition: transform 0.2s;
+        }
+        .lesson-bubble:active { transform: scale(0.95); }
+        .lesson-bubble[data-status="completed"] { background-color: #0891b2; border: 4px solid #67e8f9; }
+        .lesson-bubble[data-status="active"] { background-color: #ec4899; border: 4px solid #f9a8d4; animation: pulse 2s infinite; }
+        .lesson-bubble[data-status="locked"] { background-color: #4b5563; border: 4px solid #6b7280; cursor: not-allowed; }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(236, 72, 153, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0); }
+        }
+        .learning-path::before {
+            content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 4px;
+            background: repeating-linear-gradient(to bottom, #4b5563, #4b5563 10px, transparent 10px, transparent 20px);
+            transform: translateX(-50%); z-index: -1;
+        }
+        .match-item {
+            transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+        }
+        .match-item.selected {
+            background-color: #0e7490;
+            border-color: #22d3ee;
+        }
+        .match-item.paired {
+            background-color: #374151;
+            color: #6b7280;
+            border-color: #4b5563;
+            cursor: not-allowed;
+        }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+        .shake { animation: shake 0.82s cubic-bezier(.36,.07,.19,.97) both; }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <div class="phone-mockup w-full bg-gray-800 rounded-[40px] border-[14px] border-black shadow-2xl overflow-hidden relative">
+        <!-- Status Bar -->
+        <div class="absolute top-0 left-0 right-0 h-8 bg-black z-50 flex justify-between items-center px-6">
+            <span class="text-white text-xs font-semibold">21:51</span>
+            <div class="absolute left-1/2 -translate-x-1/2 bg-black h-6 w-24 rounded-b-lg"></div>
+            <div class="flex items-center space-x-1"><i data-lucide="wifi" class="w-4 h-4 text-white"></i><i data-lucide="bar-chart-2" class="w-4 h-4 text-white -rotate-90"></i><i data-lucide="battery-full" class="w-4 h-4 text-white"></i></div>
+        </div>
+
+        <div id="appContainer" class="phone-screen h-full bg-gray-900 text-white">
+            
+            <div id="screen-splash" class="app-screen bg-gray-900 active flex items-center justify-center"><div class="text-center"><i data-lucide="message-circle-heart" class="w-24 h-24 text-cyan-400 mx-auto animate-pulse"></i><h1 class="text-4xl font-bold mt-4">BICARA</h1></div></div>
+            
+            <!-- AUTH FLOW -->
+            <div id="screen-welcome" class="app-screen bg-gray-900 justify-between p-8 text-center">
+                <div><i data-lucide="message-circle-heart" class="w-24 h-24 text-cyan-400 mx-auto"></i><h1 class="text-4xl font-bold mt-4">Selamat Datang di BICARA</h1><p class="text-gray-400 mt-2">Menjembatani Komunikasi, Membuka Dunia.</p></div>
+                <div class="w-full space-y-4">
+                    <button onclick="navigate('screen-signup')" class="w-full bg-cyan-500 text-white font-semibold py-3 rounded-lg">Buat Akun Baru</button>
+                    <button onclick="navigate('screen-login')" class="w-full bg-gray-700 text-white font-semibold py-3 rounded-lg">Sudah Punya Akun? Masuk</button>
+                </div>
+            </div>
+
+            <div id="screen-signup" class="app-screen bg-gray-900 p-8">
+                <button onclick="goBack()" class="absolute top-12 left-6 text-gray-400"><i data-lucide="arrow-left" class="w-6 h-6"></i></button>
+                <div class="flex-grow flex flex-col justify-center">
+                    <h2 class="text-3xl font-bold mb-6">Buat Akun</h2>
+                    <div class="space-y-4">
+                        <input type="email" id="signup-email" placeholder="Alamat Email" class="w-full bg-gray-800 border-2 border-gray-700 rounded-lg py-3 px-4 focus:border-cyan-500 focus:outline-none">
+                        <input type="password" id="signup-password" placeholder="Kata Sandi" class="w-full bg-gray-800 border-2 border-gray-700 rounded-lg py-3 px-4 focus:border-cyan-500 focus:outline-none">
+                    </div>
+                    <button onclick="handleSignUp()" class="w-full bg-cyan-500 text-white font-semibold py-3 rounded-lg mt-8">Daftar</button>
+                </div>
+            </div>
+
+             <div id="screen-login" class="app-screen bg-gray-900 p-8">
+                <button onclick="goBack()" class="absolute top-12 left-6 text-gray-400"><i data-lucide="arrow-left" class="w-6 h-6"></i></button>
+                <div class="flex-grow flex flex-col justify-center">
+                    <h2 class="text-3xl font-bold mb-6">Masuk</h2>
+                    <div class="space-y-4">
+                        <input type="email" id="login-email" placeholder="Alamat Email" value="user@test.com" class="w-full bg-gray-800 border-2 border-gray-700 rounded-lg py-3 px-4 focus:border-cyan-500 focus:outline-none">
+                        <input type="password" id="login-password" placeholder="Kata Sandi" value="password123" class="w-full bg-gray-800 border-2 border-gray-700 rounded-lg py-3 px-4 focus:border-cyan-500 focus:outline-none">
+                    </div>
+                    <button onclick="handleLogin()" class="w-full bg-cyan-500 text-white font-semibold py-3 rounded-lg mt-8">Masuk</button>
+                    <p class="text-center text-gray-500 mt-4 text-sm">Lupa kata sandi?</p>
+                </div>
+            </div>
+
+            <div id="screen-verify" class="app-screen bg-gray-900 justify-center items-center p-8 text-center">
+                <i data-lucide="mail-check" class="w-24 h-24 text-cyan-400 mx-auto"></i>
+                <h2 class="text-3xl font-bold mt-6 mb-2">Verifikasi Email Anda</h2>
+                <p class="text-gray-400 mb-8">Kami telah mengirimkan kode verifikasi. (Ini adalah simulasi, akan lanjut otomatis...)</p>
+                <i data-lucide="loader-2" class="w-12 h-12 text-gray-500 animate-spin"></i>
+            </div>
+
+            <!-- ONBOARDING & STATS FLOW -->
+            <div id="screen-role" class="app-screen bg-gray-900 justify-center p-8"></div>
+            <div id="screen-stats-1" class="app-screen bg-gray-900 p-8 justify-center">
+                <h2 class="text-3xl font-bold mb-2">Sedikit Tentang Anda</h2><p class="text-gray-500 mb-8">(Untuk Tujuan Statistik)</p>
+                <div class="space-y-4">
+                    <label class="font-semibold">Berapa usia Anda?</label><input type="number" placeholder="Contoh: 17" class="w-full bg-gray-800 border-2 border-gray-700 rounded-lg py-3 px-4">
+                    <label class="font-semibold">Di provinsi mana Anda tinggal?</label><input type="text" placeholder="Contoh: Jawa Barat" class="w-full bg-gray-800 border-2 border-gray-700 rounded-lg py-3 px-4">
+                </div>
+                <button onclick="navigate('screen-stats-2')" class="w-full bg-cyan-500 text-white font-semibold py-3 rounded-lg mt-8">Lanjut</button>
+            </div>
+            <div id="screen-stats-2" class="app-screen bg-gray-900 p-8 justify-center"></div>
+            <div id="screen-stats-3" class="app-screen bg-gray-900 p-8 justify-center"></div>
+            <div id="screen-language" class="app-screen bg-gray-900 justify-center p-8"><h2 class="text-3xl font-bold text-center mb-2">Bahasa Isyarat Utama</h2><p class="text-gray-400 text-center mb-8">Pilihan ini menentukan model AI yang digunakan.</p><div class="space-y-4"><button onclick="navigate('screen-calibration-intro')" class="w-full bg-gray-800 p-6 rounded-lg text-left text-lg font-semibold flex items-center justify-between"><div><i data-lucide="sign-language" class="w-8 h-8 mr-4 text-cyan-400 inline"></i> BISINDO</div><i data-lucide="info" class="w-5 h-5 text-gray-500"></i></button><button onclick="navigate('screen-calibration-intro')" class="w-full bg-gray-800 p-6 rounded-lg text-left text-lg font-semibold flex items-center justify-between"><div><i data-lucide="sign-language" class="w-8 h-8 mr-4 text-cyan-400 inline"></i> SIBI</div><i data-lucide="info" class="w-5 h-5 text-gray-500"></i></button></div></div>
+            <div id="screen-calibration-intro" class="app-screen bg-gray-900 justify-center items-center p-8 text-center"><i data-lucide="scan-face" class="w-24 h-24 text-cyan-400 mx-auto"></i><h2 class="text-3xl font-bold mt-6 mb-2">Kalibrasi Cerdas</h2><p class="text-gray-400 mb-8">Bantu AI mengenali gaya isyarat Anda. Proses ini hanya 1 menit.</p><button onclick="navigate('screen-calibration-main')" class="w-full bg-cyan-500 text-white font-semibold py-4 rounded-lg text-lg">Mulai Kalibrasi</button></div>
+            <div id="screen-calibration-main" class="app-screen bg-black p-4"><div class="flex-grow flex flex-col justify-center items-center"><p class="text-gray-300 mb-2">Tirukan Gerakan Berikut</p><div class="w-full aspect-square bg-gray-700 rounded-lg flex items-center justify-center mb-4 relative"><i data-lucide="hand" class="w-24 h-24 text-cyan-300 animate-pulse"></i><div class="absolute bottom-2 left-2 right-2 p-2 bg-black/30 rounded-lg"><p class="text-lg font-bold">"Terima Kasih"</p></div></div><div class="w-full aspect-video bg-gray-800 rounded-lg relative overflow-hidden flex items-center justify-center"><i data-lucide="user-round" class="w-16 h-16 text-gray-600"></i><div class="absolute inset-0 border-4 border-dashed border-gray-600 rounded-lg"></div></div></div><button onclick="finishOnboarding()" class="w-full bg-cyan-500 text-white font-semibold py-3 rounded-lg mt-4">Selesai</button></div>
+            
+            <!-- MAIN APP INTERFACE -->
+            <div id="screen-main-app" class="app-screen bg-gray-900">
+                <div id="appContent" class="flex-grow overflow-y-auto scroll-container">
+                    <div id="screen-translate-container" class="h-full"></div>
+                    <div id="screen-learn" class="hidden h-full flex flex-col">
+                        <h2 class="text-3xl font-bold p-6 pb-2">Akademi Isyarat</h2>
+                        <div id="learning-path-container" class="flex-grow overflow-y-auto p-8"></div>
+                    </div>
+                    <div id="screen-profile" class="hidden p-6 scroll-container"></div>
+                </div>
+                <div id="bottomNav" class="flex justify-around items-center bg-gray-800 border-t border-gray-700 py-2"><button onclick="switchTab('translate')" class="p-2 flex flex-col items-center text-gray-500 w-1/3"><i data-lucide="camera" class="w-7 h-7 mb-1"></i><span class="text-xs">Terjemahkan</span></button><button onclick="switchTab('learn')" class="p-2 flex flex-col items-center text-gray-500 w-1/3"><i data-lucide="book-open" class="w-7 h-7 mb-1"></i><span class="text-xs">Belajar</span></button><button onclick="switchTab('profile')" class="p-2 flex flex-col items-center text-gray-500 w-1/3"><i data-lucide="user-circle" class="w-7 h-7 mb-1"></i><span class="text-xs">Profil</span></button></div>
+            </div>
+
+            <!-- LESSON & QUIZ FLOW -->
+            <div id="screen-lesson" class="app-screen bg-gray-900 p-4 justify-between">
+                <div id="lesson-header" class="flex items-center gap-4">
+                    <button onclick="goBack()"><i data-lucide="x" class="w-6 h-6 text-gray-500"></i></button>
+                    <div class="w-full bg-gray-700 rounded-full h-4"><div id="lesson-progress-bar" class="bg-cyan-500 h-4 rounded-full transition-all duration-300"></div></div>
+                </div>
+                <div id="lesson-content" class="flex-grow flex flex-col justify-center items-center px-4"></div>
+                <div id="lesson-footer" class="h-28">
+                    <div id="feedback-correct" class="hidden h-full bg-cyan-900/80 border-t-4 border-cyan-400 flex justify-between items-center px-6">
+                        <div class="flex items-center"><i data-lucide="check-circle" class="w-10 h-10 text-cyan-300 mr-4"></i><p class="text-xl font-bold text-cyan-300">Kerja Bagus!</p></div>
+                        <button onclick="nextQuestion()" class="bg-cyan-400 text-gray-900 font-bold py-3 px-8 rounded-lg text-lg">LANJUT</button>
+                    </div>
+                    <div id="feedback-incorrect" class="hidden h-full bg-pink-900/80 border-t-4 border-pink-400 flex justify-between items-center px-6">
+                         <div class="flex items-center"><i data-lucide="x-circle" class="w-10 h-10 text-pink-300 mr-4"></i><p id="incorrect-answer-text" class="text-xl font-bold text-pink-300">Jawaban Tepat: ...</p></div>
+                        <button onclick="nextQuestion()" class="bg-pink-400 text-gray-900 font-bold py-3 px-8 rounded-lg text-lg">LANJUT</button>
+                    </div>
+                    <div id="check-button-container" class="h-full flex items-center">
+                        <button id="check-answer-btn" onclick="checkAnswer()" class="w-full bg-gray-500 text-gray-300 font-bold py-4 rounded-lg text-lg cursor-not-allowed" disabled>PERIKSA</button>
+                    </div>
+                </div>
+            </div>
+            <div id="screen-lesson-complete" class="app-screen bg-gray-900 p-8 justify-between text-center">
+                <div class="flex-grow flex flex-col justify-center items-center">
+                    <i data-lucide="award" class="w-32 h-32 text-yellow-400"></i>
+                    <h1 class="text-4xl font-bold mt-6">Pelajaran Selesai!</h1>
+                    <div class="mt-8 bg-gray-800 p-4 rounded-lg flex items-center justify-center space-x-4">
+                        <i data-lucide="star" class="w-8 h-8 text-yellow-400"></i>
+                        <p class="text-2xl font-bold">+20 XP</p>
+                    </div>
+                </div>
+                <button onclick="goBack()" class="w-full bg-cyan-500 text-white font-semibold py-4 rounded-lg text-lg">Luar Biasa!</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        let mockUserData = { "user@test.com": "password123" };
+        let navigationStack = ['screen-splash'];
+        let learningPathData;
+        let currentLessonState = {};
+        let matchState = {};
+
+        setTimeout(() => navigate('screen-welcome'), 1500);
+        
+        function navigate(screenId) {
+            const currentScreenId = navigationStack[navigationStack.length - 1];
+            const currentScreenEl = document.getElementById(currentScreenId);
+            const nextScreenEl = document.getElementById(screenId);
+            if (currentScreenEl) currentScreenEl.classList.add('exit-left');
+            nextScreenEl.classList.remove('exit-left', 'active');
+            setTimeout(() => nextScreenEl.classList.add('active'), 50);
+            navigationStack.push(screenId);
+        }
+
+        function goBack() {
+            if (navigationStack.length <= 1) return;
+            const currentScreenId = navigationStack.pop();
+            const prevScreenId = navigationStack[navigationStack.length - 1];
+            const currentScreenEl = document.getElementById(currentScreenId);
+            const prevScreenEl = document.getElementById(prevScreenId);
+            currentScreenEl.classList.remove('active');
+            currentScreenEl.classList.add('exit-left');
+            setTimeout(() => currentScreenEl.classList.remove('exit-left'), 350);
+            prevScreenEl.classList.remove('exit-left');
+            prevScreenEl.classList.add('active');
+        }
+
+        function handleSignUp() {
+            const email = document.getElementById('signup-email').value;
+            if (!email || !document.getElementById('signup-password').value) { alert('Email dan kata sandi tidak boleh kosong'); return; }
+            navigate('screen-verify');
+            setTimeout(() => navigate('screen-role'), 2500);
+        }
+        function handleLogin() {
+            const email = document.getElementById('login-email').value;
+            const pass = document.getElementById('login-password').value;
+            if (mockUserData[email] && mockUserData[email] === pass) {
+                initializeLearningData();
+                navigate('screen-main-app');
+                switchTab('learn'); // Default to learn tab after login
+            } else {
+                alert('Email atau kata sandi salah!');
+            }
+        }
+        
+        document.getElementById('screen-role').innerHTML = `<h2 class="text-3xl font-bold text-center mb-2">Saya seorang...</h2><p class="text-gray-400 text-center mb-8">Pilihan ini akan menyesuaikan pengalaman Anda.</p><div class="space-y-4"><button onclick="navigate('screen-stats-1')" class="w-full bg-gray-800 p-6 rounded-lg text-left text-lg font-semibold flex items-center"><i data-lucide="user-round" class="w-8 h-8 mr-4 text-cyan-400"></i> Siswa Tuli / Bisu</button><button onclick="navigate('screen-stats-1')" class="w-full bg-gray-800 p-6 rounded-lg text-left text-lg font-semibold flex items-center"><i data-lucide="school" class="w-8 h-8 mr-4 text-cyan-400"></i> Guru / Dosen</button></div>`;
+        document.getElementById('screen-stats-2').innerHTML = `<button onclick="goBack()" class="absolute top-12 left-6 text-gray-400"><i data-lucide="arrow-left"></i></button><h2 class="text-3xl font-bold mb-2">Lingkungan Anda</h2><p class="text-gray-500 mb-8">(Untuk Tujuan Statistik)</p><label class="font-semibold">Apa jenis institusi Anda?</label><select class="w-full bg-gray-800 border-2 border-gray-700 rounded-lg py-3 px-4 mt-2"><option>Sekolah Luar Biasa (SLB)</option><option>Sekolah Inklusi</option><option>Sekolah Umum</option><option>Universitas</option></select><button onclick="navigate('screen-stats-3')" class="w-full bg-cyan-500 text-white font-semibold py-3 rounded-lg mt-8">Lanjut</button>`;
+        document.getElementById('screen-stats-3').innerHTML = `<button onclick="goBack()" class="absolute top-12 left-6 text-gray-400"><i data-lucide="arrow-left"></i></button><h2 class="text-3xl font-bold mb-2">Pengalaman Anda</h2><p class="text-gray-500 mb-8">(Untuk Tujuan Statistik)</p><label class="font-semibold">Alat bantu utama Anda sebelum ini?</label><select class="w-full bg-gray-800 border-2 border-gray-700 rounded-lg py-3 px-4 mt-2"><option>Juru Bahasa Isyarat</option><option>Menulis di ponsel/kertas</option><option>Bantuan Teman</option><option>Tidak Ada</option></select><button onclick="navigate('screen-language')" class="w-full bg-cyan-500 text-white font-semibold py-3 rounded-lg mt-8">Selesai & Lanjut</button>`;
+        function finishOnboarding() { initializeLearningData(); navigate('screen-main-app'); switchTab('learn'); }
+
+        function initializeLearningData() {
+            learningPathData = [ { title: "Unit 1: Perkenalan Diri", lessons: [ { name: "Salam", status: "active", icon: "hand", questions: [ { type: 'choice', question: "Pilih isyarat untuk 'Halo'", imageIcon: 'hand', options: ['Halo', 'Terima Kasih', 'Maaf'], correct: 'Halo' }, { type: 'match', question: "Cocokkan Kata", pairs: {'Senang': 'smile', 'Sedih': 'frown', 'Marah': 'angry'} }, { type: 'choice', question: "Isyarat ini berarti...", imageIcon: 'user-round', options: ['Kamu', 'Saya', 'Dia'], correct: 'Saya' }, ]}, { name: "Nama", status: "locked", icon: "user-round", questions: [] }, ] }, { title: "Unit 2: Aktivitas Harian", lessons: [ { name: "Makan", status: "locked", icon: "utensils", questions: [] } ] } ];
+        }
+        
+        function switchTab(tabName) {
+            const contentScreens = { 'translate': 'screen-translate-container', 'learn': 'screen-learn', 'profile': 'screen-profile' };
+            Object.values(contentScreens).forEach(id => document.getElementById(id).style.display = 'none');
+            
+            const navButtons = document.getElementById('bottomNav').querySelectorAll('button');
+            navButtons.forEach(btn => btn.classList.replace('text-cyan-400', 'text-gray-500'));
+            
+            const activeScreen = document.getElementById(contentScreens[tabName]);
+            activeScreen.style.display = 'block';
+            if (tabName === 'learn') activeScreen.style.display = 'flex';
+            
+            const activeBtn = Array.from(navButtons).find(b => b.getAttribute('onclick').includes(`'${tabName}'`));
+            if(activeBtn) activeBtn.classList.replace('text-gray-500', 'text-cyan-400');
+
+            if (tabName === 'translate') renderTranslateScreen('default');
+            if (tabName === 'learn') renderLearningPath();
+            if (tabName === 'profile') renderProfileScreen();
+        }
+
+        function renderProfileScreen() {
+            const container = document.getElementById('screen-profile');
+            container.innerHTML = `<h2 class="text-3xl font-bold mb-6">Profil & Pengaturan</h2><div class="flex items-center bg-gray-800 p-4 rounded-lg mb-6"><div class="w-16 h-16 bg-cyan-500 rounded-full flex items-center justify-center mr-4"><i data-lucide="user-round" class="w-8 h-8"></i></div><div><h3 class="text-xl font-semibold">Pengguna Uji</h3><p class="text-sm text-gray-400">user@test.com</p></div></div><div class="space-y-2"><a href="#" class="flex items-center justify-between bg-gray-800 p-4 rounded-lg"><div class="flex items-center"><i data-lucide="gem" class="w-5 h-5 mr-3 text-cyan-400"></i>Kelola Langganan BICARA+</div><i data-lucide="chevron-right" class="w-5 h-5 text-gray-500"></i></a><a href="#" class="flex items-center justify-between bg-gray-800 p-4 rounded-lg"><div class="flex items-center"><i data-lucide="scan-face" class="w-5 h-5 mr-3 text-cyan-400"></i>Kalibrasi Ulang</div><i data-lucide="chevron-right" class="w-5 h-5 text-gray-500"></i></a><a onclick="navigate('screen-welcome')" class="flex items-center justify-between bg-gray-800 p-4 rounded-lg mt-4 cursor-pointer"><div class="flex items-center text-red-400"><i data-lucide="log-out" class="w-5 h-5 mr-3"></i>Keluar</div></a></div>`;
+            lucide.createIcons();
+        }
+
+        function renderTranslateScreen(mode) {
+             let content = '';
+            if (mode === 'conversation') {
+                content = `<div class="h-full flex flex-col bg-black"><div class="p-4 flex items-center"><button onclick="renderTranslateScreen('default')" class="p-2"><i data-lucide="arrow-left"></i></button><h2 class="text-xl font-bold ml-4">Percakapan</h2></div><div class="flex-grow p-4 overflow-y-auto space-y-4"><div class="flex justify-start"><div class="bg-gray-700 p-3 rounded-lg max-w-xs">Teks dari teman dengar.</div></div><div class="flex justify-end"><div class="bg-cyan-600 p-3 rounded-lg max-w-xs">Terjemahan isyarat Anda.</div></div></div><div class="p-4 bg-gray-800 flex items-center"><input type="text" placeholder="Ketik pesan..." class="flex-grow bg-gray-700 rounded-full py-2 px-4"><button class="p-3 ml-2 bg-cyan-500 rounded-full"><i data-lucide="send"></i></button></div></div>`;
+            } else if (mode === 'ar') {
+                content = `<div class="h-full flex flex-col bg-gray-700 items-center justify-center relative"><i data-lucide="camera" class="w-32 h-32 text-gray-500"></i><div class="absolute bottom-10 left-4 right-4 p-3 bg-black/60 rounded-lg text-center text-xl">Subtitle AR akan muncul di sini</div><button onclick="renderTranslateScreen('default')" class="absolute top-12 left-6 p-2 bg-black/50 rounded-full"><i data-lucide="x"></i></button></div>`;
+            } else {
+                content = `<div class="h-full flex flex-col"><div class="flex-grow bg-gray-700 relative flex items-center justify-center"><i data-lucide="video" class="w-24 h-24 text-gray-500"></i><div class="absolute top-4 right-4 flex space-x-2"><button onclick="renderTranslateScreen('conversation')" class="bg-black/50 p-2 rounded-full"><i data-lucide="users"></i></button><button onclick="renderTranslateScreen('ar')" class="bg-black/50 p-2 rounded-full"><i data-lucide="box"></i></button></div><div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent"><div class="bg-black/50 p-4 rounded-lg"><p class="text-xl text-gray-300">Hasil terjemahan...</p></div></div></div><div class="p-4 bg-gray-900 flex items-center"><p class="text-sm text-gray-400 flex-grow">Mode: Komunikasi Langsung</p><button class="bg-cyan-500 p-3 rounded-full"><i data-lucide="mic" class="w-6 h-6"></i></button></div></div>`;
+            }
+            document.getElementById('screen-translate-container').innerHTML = content;
+            lucide.createIcons();
+        }
+
+        function renderLearningPath() {
+            const container = document.getElementById('learning-path-container');
+            container.innerHTML = '';
+            learningPathData.forEach((unit, unitIndex) => {
+                container.innerHTML += `<div class="bg-cyan-800 text-white font-bold p-3 rounded-lg text-center mb-8">${unit.title}</div>`;
+                const path = document.createElement('div');
+                path.className = 'relative flex flex-col items-center space-y-4 learning-path pb-8';
+                unit.lessons.forEach((lesson, lessonIndex) => {
+                    const lessonContainer = document.createElement('div');
+                    lessonContainer.className = 'flex flex-col items-center text-center';
+
+                    const bubble = document.createElement('div');
+                    bubble.className = 'lesson-bubble';
+                    bubble.dataset.status = lesson.status;
+                    bubble.innerHTML = `<i data-lucide="${lesson.icon}" class="w-10 h-10 text-white"></i>`;
+                    if (lesson.status !== 'locked') {
+                        bubble.onclick = () => startLesson(unitIndex, lessonIndex);
+                    }
+
+                    const label = document.createElement('p');
+                    label.className = 'text-sm font-semibold mt-2';
+                    label.textContent = lesson.name;
+                    
+                    if (lesson.status === 'locked') {
+                        label.classList.add('text-gray-500');
+                    } else {
+                        label.classList.add('text-white');
+                    }
+
+                    lessonContainer.appendChild(bubble);
+                    lessonContainer.appendChild(label);
+                    path.appendChild(lessonContainer);
+                });
+                container.appendChild(path);
+            });
+            lucide.createIcons();
+        }
+        
+        function startLesson(unitIndex, lessonIndex) {
+            currentLessonState = { unit: unitIndex, lesson: lessonIndex, question: 0, selectedAnswer: null };
+            navigate('screen-lesson');
+            renderQuestion();
+        }
+
+        function renderQuestion() {
+            const { unit, lesson, question } = currentLessonState;
+            const questionData = learningPathData[unit].lessons[lesson].questions[question];
+            const contentEl = document.getElementById('lesson-content');
+            
+            ['feedback-correct', 'feedback-incorrect'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            document.getElementById('check-button-container').classList.remove('hidden');
+            document.getElementById('check-answer-btn').disabled = true;
+            document.getElementById('check-answer-btn').className = "w-full bg-gray-500 text-gray-300 font-bold py-4 rounded-lg text-lg cursor-not-allowed";
+
+            const totalQuestions = learningPathData[unit].lessons[lesson].questions.length;
+            document.getElementById('lesson-progress-bar').style.width = `${((question) / totalQuestions) * 100}%`;
+
+            let html = `<h2 class="text-2xl font-bold text-center mb-6">${questionData.question}</h2>`;
+            
+            if (questionData.type === 'choice') {
+                if (questionData.imageIcon) html += `<div class="w-48 h-48 bg-gray-800 rounded-lg flex items-center justify-center mb-6"><i data-lucide="${questionData.imageIcon}" class="w-24 h-24 text-cyan-300"></i></div>`;
+                html += `<div id="answer-options" class="w-full space-y-3">`;
+                questionData.options.forEach(option => { html += `<button onclick="selectAnswer(this, '${option}')" class="w-full bg-gray-800 border-2 border-gray-700 p-4 rounded-lg text-lg font-semibold text-left">${option}</button>`; });
+                html += `</div>`;
+            } else if (questionData.type === 'match') {
+                matchState = { first: null, second: null, pairs: 0, totalPairs: Object.keys(questionData.pairs).length };
+                const keys = Object.keys(questionData.pairs).sort(() => Math.random() - 0.5);
+                const values = Object.values(questionData.pairs).sort(() => Math.random() - 0.5);
+                html += `<div class="w-full grid grid-cols-2 gap-4">`;
+                html += `<div class="space-y-3">${keys.map(k => `<button onclick="selectMatch(this, '${k}', 'key')" class="w-full bg-gray-800 border-2 border-gray-700 p-4 rounded-lg text-lg font-semibold match-item" data-key="${k}">${k}</button>`).join('')}</div>`;
+                html += `<div class="space-y-3">${values.map(v => `<button onclick="selectMatch(this, '${v}', 'value')" class="w-full bg-gray-800 border-2 border-gray-700 p-4 rounded-lg text-lg font-semibold match-item flex items-center justify-center" data-value="${v}"><i data-lucide="${v}" class="w-8 h-8"></i></button>`).join('')}</div>`;
+                html += `</div>`;
+            }
+            contentEl.innerHTML = html;
+            lucide.createIcons();
+        }
+        
+        function selectAnswer(btnEl, answer) {
+            currentLessonState.selectedAnswer = answer;
+            document.querySelectorAll('#answer-options button').forEach(btn => btn.classList.remove('bg-cyan-800', 'border-cyan-500'));
+            btnEl.classList.add('bg-cyan-800', 'border-cyan-500');
+            const checkBtn = document.getElementById('check-answer-btn');
+            checkBtn.disabled = false;
+            checkBtn.className = "w-full bg-cyan-500 text-white font-bold py-4 rounded-lg text-lg";
+        }
+
+        function selectMatch(btnEl, value, column) {
+            if (btnEl.classList.contains('paired')) return;
+
+            const stateProp = column === 'key' ? 'first' : 'second';
+
+            if (matchState[stateProp] && matchState[stateProp].el === btnEl) {
+                btnEl.classList.remove('selected');
+                matchState[stateProp] = null;
+                return;
+            }
+
+            if (matchState[stateProp]) matchState[stateProp].el.classList.remove('selected');
+            
+            btnEl.classList.add('selected');
+            matchState[stateProp] = { el: btnEl, value: value };
+
+            if (matchState.first && matchState.second) {
+                const { unit, lesson, question } = currentLessonState;
+                const pairs = learningPathData[unit].lessons[lesson].questions[question].pairs;
+
+                if (pairs[matchState.first.value] === matchState.second.value) {
+                    matchState.first.el.classList.add('paired');
+                    matchState.second.el.classList.add('paired');
+                    matchState.first.el.classList.remove('selected');
+                    matchState.second.el.classList.remove('selected');
+                    matchState.first = null;
+                    matchState.second = null;
+                    matchState.pairs++;
+                    if (matchState.pairs === matchState.totalPairs) {
+                        const checkBtn = document.getElementById('check-answer-btn');
+                        checkBtn.disabled = false;
+                        checkBtn.className = "w-full bg-cyan-500 text-white font-bold py-4 rounded-lg text-lg";
+                    }
+                } else {
+                    const firstEl = matchState.first.el;
+                    const secondEl = matchState.second.el;
+                    firstEl.classList.add('shake');
+                    secondEl.classList.add('shake');
+                    setTimeout(() => {
+                        firstEl.classList.remove('selected', 'shake');
+                        secondEl.classList.remove('selected', 'shake');
+                    }, 820);
+                    matchState.first = null;
+                    matchState.second = null;
+                }
+            }
+        }
+
+        function checkAnswer() {
+            const { unit, lesson, question, selectedAnswer } = currentLessonState;
+            const questionData = learningPathData[unit].lessons[lesson].questions[question];
+            let isCorrect = false;
+
+            if (questionData.type === 'choice') {
+                isCorrect = selectedAnswer === questionData.correct;
+            } else if (questionData.type === 'match') {
+                isCorrect = matchState.pairs === matchState.totalPairs;
+            }
+            
+            document.getElementById('check-button-container').classList.add('hidden');
+            if (isCorrect) {
+                document.getElementById('feedback-correct').classList.remove('hidden');
+            } else {
+                if(questionData.correct) {
+                    document.getElementById('incorrect-answer-text').textContent = `Jawaban Tepat: ${questionData.correct}`;
+                } else {
+                    document.getElementById('incorrect-answer-text').textContent = `Coba lagi nanti!`;
+                }
+                document.getElementById('feedback-incorrect').classList.remove('hidden');
+            }
+            const totalQuestions = learningPathData[unit].lessons[lesson].questions.length;
+            document.getElementById('lesson-progress-bar').style.width = `${((question + 1) / totalQuestions) * 100}%`;
+        }
+        
+        function nextQuestion() {
+            const { unit, lesson } = currentLessonState;
+            const totalQuestions = learningPathData[unit].lessons[lesson].questions.length;
+            if (currentLessonState.question + 1 < totalQuestions) {
+                currentLessonState.question++;
+                renderQuestion();
+            } else {
+                lessonComplete();
+            }
+        }
+
+        function lessonComplete() {
+            const { unit, lesson } = currentLessonState;
+            learningPathData[unit].lessons[lesson].status = 'completed';
+            if (lesson + 1 < learningPathData[unit].lessons.length) {
+                learningPathData[unit].lessons[lesson + 1].status = 'active';
+            } else if (unit + 1 < learningPathData.length) {
+                learningPathData[unit + 1].lessons[0].status = 'active';
+            }
+            navigate('screen-lesson-complete');
+        }
+
+    </script>
+</body>
+</html>
+
