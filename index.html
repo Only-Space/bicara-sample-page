@@ -135,8 +135,26 @@
             <div id="screen-forgot-password-sent" class="app-screen bg-gray-900 justify-center items-center p-8 text-center">
                 <i data-lucide="mail-check" class="w-24 h-24 text-cyan-400 mx-auto"></i>
                 <h2 class="text-3xl font-bold mt-6 mb-2">Tautan Terkirim!</h2>
-                <p class="text-gray-400 mb-8">Silakan periksa email Anda untuk mengatur ulang kata sandi. (Simulasi)</p>
-                <p class="text-sm text-gray-500">Anda akan diarahkan kembali ke halaman masuk...</p>
+                <p class="text-gray-400 mb-8">Silakan periksa email Anda untuk melanjutkan. (Simulasi)</p>
+            </div>
+            
+            <div id="screen-reset-password" class="app-screen bg-gray-900 p-8">
+                <button onclick="goBack()" class="absolute top-12 left-6 text-gray-400"><i data-lucide="arrow-left" class="w-6 h-6"></i></button>
+                <div class="flex-grow flex flex-col justify-center">
+                    <h2 class="text-3xl font-bold mb-4">Atur Ulang Kata Sandi</h2>
+                    <p class="text-gray-400 mb-8">Masukkan kata sandi baru Anda di bawah ini.</p>
+                    <div class="space-y-4">
+                        <input type="password" id="reset-password-new" placeholder="Kata Sandi Baru" class="w-full bg-gray-800 border-2 border-gray-700 rounded-lg py-3 px-4 focus:border-cyan-500 focus:outline-none">
+                        <input type="password" id="reset-password-confirm" placeholder="Konfirmasi Kata Sandi Baru" class="w-full bg-gray-800 border-2 border-gray-700 rounded-lg py-3 px-4 focus:border-cyan-500 focus:outline-none">
+                    </div>
+                    <button onclick="handleResetPassword()" class="w-full bg-cyan-500 text-white font-semibold py-3 rounded-lg mt-8">Simpan Kata Sandi</button>
+                </div>
+            </div>
+
+            <div id="screen-reset-success" class="app-screen bg-gray-900 justify-center items-center p-8 text-center">
+                <i data-lucide="check-circle" class="w-24 h-24 text-green-400 mx-auto"></i>
+                <h2 class="text-3xl font-bold mt-6 mb-2">Berhasil!</h2>
+                <p class="text-gray-400 mb-8">Kata sandi Anda telah diperbarui. Silakan masuk kembali.</p>
             </div>
 
 
@@ -378,9 +396,40 @@
             navigate('screen-forgot-password-sent');
 
             setTimeout(() => {
-                goBack(); // to forgot-password screen
-                goBack(); // to login screen
-            }, 3000);
+                navigate('screen-reset-password');
+            }, 2500);
+        }
+
+        function handleResetPassword() {
+            const newPass = document.getElementById('reset-password-new').value;
+            const confirmPass = document.getElementById('reset-password-confirm').value;
+
+            if (!newPass || !confirmPass) {
+                alert('Harap isi kedua kolom kata sandi.');
+                return;
+            }
+
+            if (newPass !== confirmPass) {
+                alert('Kata sandi tidak cocok. Silakan coba lagi.');
+                return;
+            }
+            
+            const userEmail = document.getElementById('forgot-email').value || "user@test.com";
+            mockUserData[userEmail] = newPass;
+
+            navigate('screen-reset-success');
+
+            setTimeout(() => {
+                // Clear the navigation stack back to the welcome screen
+                navigationStack = ['screen-splash', 'screen-welcome'];
+                document.querySelectorAll('.app-screen').forEach(el => el.classList.remove('active', 'exit-left'));
+                document.getElementById('screen-welcome').classList.add('active');
+                
+                // Then navigate to login
+                navigate('screen-login');
+                document.getElementById('login-password').value = newPass;
+
+            }, 2500);
         }
         
         document.getElementById('screen-role').innerHTML = `<h2 class="text-3xl font-bold text-center mb-2">Saya seorang...</h2><p class="text-gray-400 text-center mb-8">Pilihan ini akan menyesuaikan pengalaman Anda.</p><div class="space-y-4"><button onclick="navigate('screen-stats-1')" class="w-full bg-gray-800 p-6 rounded-lg text-left text-lg font-semibold flex items-center"><i data-lucide="user-round" class="w-8 h-8 mr-4 text-cyan-400"></i> Siswa Tuli / Bisu</button><button onclick="navigate('screen-stats-1')" class="w-full bg-gray-800 p-6 rounded-lg text-left text-lg font-semibold flex items-center"><i data-lucide="school" class="w-8 h-8 mr-4 text-cyan-400"></i> Guru / Dosen</button></div>`;
