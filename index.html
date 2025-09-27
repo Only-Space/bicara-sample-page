@@ -60,6 +60,8 @@
             40%, 60% { transform: translate3d(4px, 0, 0); }
         }
         .shake { animation: shake 0.82s cubic-bezier(.36,.07,.19,.97) both; }
+        .heart-icon.filled { color: #f43f5e; }
+        .heart-icon.empty { color: #4b5563; }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen p-4">
@@ -106,7 +108,7 @@
                         <input type="password" id="login-password" placeholder="Kata Sandi" value="password123" class="w-full bg-gray-800 border-2 border-gray-700 rounded-lg py-3 px-4 focus:border-cyan-500 focus:outline-none">
                     </div>
                     <button onclick="handleLogin()" class="w-full bg-cyan-500 text-white font-semibold py-3 rounded-lg mt-8">Masuk</button>
-                    <p class="text-center text-gray-500 mt-4 text-sm">Lupa kata sandi?</p>
+                    <button onclick="navigate('screen-forgot-password')" class="text-center text-cyan-400 mt-4 text-sm w-full hover:underline">Lupa kata sandi?</button>
                 </div>
             </div>
 
@@ -116,6 +118,27 @@
                 <p class="text-gray-400 mb-8">Kami telah mengirimkan kode verifikasi. (Ini adalah simulasi, akan lanjut otomatis...)</p>
                 <i data-lucide="loader-2" class="w-12 h-12 text-gray-500 animate-spin"></i>
             </div>
+            
+            <!-- FORGOT PASSWORD FLOW -->
+            <div id="screen-forgot-password" class="app-screen bg-gray-900 p-8">
+                <button onclick="goBack()" class="absolute top-12 left-6 text-gray-400"><i data-lucide="arrow-left" class="w-6 h-6"></i></button>
+                <div class="flex-grow flex flex-col justify-center">
+                    <h2 class="text-3xl font-bold mb-4">Lupa Kata Sandi</h2>
+                    <p class="text-gray-400 mb-8">Masukkan alamat email Anda, dan kami akan mengirimkan tautan untuk mengatur ulang kata sandi Anda.</p>
+                    <div class="space-y-4">
+                        <input type="email" id="forgot-email" placeholder="Alamat Email" class="w-full bg-gray-800 border-2 border-gray-700 rounded-lg py-3 px-4 focus:border-cyan-500 focus:outline-none">
+                    </div>
+                    <button onclick="handleForgotPassword()" class="w-full bg-cyan-500 text-white font-semibold py-3 rounded-lg mt-8">Kirim Tautan Atur Ulang</button>
+                </div>
+            </div>
+
+            <div id="screen-forgot-password-sent" class="app-screen bg-gray-900 justify-center items-center p-8 text-center">
+                <i data-lucide="mail-check" class="w-24 h-24 text-cyan-400 mx-auto"></i>
+                <h2 class="text-3xl font-bold mt-6 mb-2">Tautan Terkirim!</h2>
+                <p class="text-gray-400 mb-8">Silakan periksa email Anda untuk mengatur ulang kata sandi. (Simulasi)</p>
+                <p class="text-sm text-gray-500">Anda akan diarahkan kembali ke halaman masuk...</p>
+            </div>
+
 
             <!-- ONBOARDING & STATS FLOW -->
             <div id="screen-role" class="app-screen bg-gray-900 justify-center p-8"></div>
@@ -138,7 +161,13 @@
                 <div id="appContent" class="flex-grow overflow-y-auto scroll-container">
                     <div id="screen-translate-container" class="h-full"></div>
                     <div id="screen-learn" class="hidden h-full flex flex-col">
-                        <h2 class="text-3xl font-bold p-6 pb-2">Akademi Isyarat</h2>
+                        <div class="p-6 pb-2 flex justify-between items-center">
+                            <h2 class="text-3xl font-bold">Akademi Isyarat</h2>
+                            <div class="flex items-center space-x-2">
+                                <i data-lucide="heart" class="w-7 h-7 text-rose-500"></i>
+                                <span id="main-heart-count" class="text-2xl font-bold">3</span>
+                            </div>
+                        </div>
                         <div id="learning-path-container" class="flex-grow overflow-y-auto p-8"></div>
                     </div>
                     <div id="screen-profile" class="hidden p-6 scroll-container"></div>
@@ -151,6 +180,7 @@
                 <div id="lesson-header" class="flex items-center gap-4">
                     <button onclick="goBack()"><i data-lucide="x" class="w-6 h-6 text-gray-500"></i></button>
                     <div class="w-full bg-gray-700 rounded-full h-4"><div id="lesson-progress-bar" class="bg-cyan-500 h-4 rounded-full transition-all duration-300"></div></div>
+                    <div id="lesson-hearts" class="flex items-center gap-1"></div>
                 </div>
                 <div id="lesson-content" class="flex-grow flex flex-col justify-center items-center px-4"></div>
                 <div id="lesson-footer" class="h-28">
@@ -176,22 +206,124 @@
                         <p class="text-2xl font-bold">+20 XP</p>
                     </div>
                 </div>
-                <button onclick="goBack()" class="w-full bg-cyan-500 text-white font-semibold py-4 rounded-lg text-lg">Luar Biasa!</button>
+                <button onclick="goToAcademy()" class="w-full bg-cyan-500 text-white font-semibold py-4 rounded-lg text-lg">Kembali ke Akademi</button>
             </div>
+            <div id="screen-no-lives" class="app-screen bg-gray-900 p-8 justify-between text-center">
+                <div class="flex-grow flex flex-col justify-center items-center">
+                    <i data-lucide="heart-crack" class="w-32 h-32 text-rose-500"></i>
+                    <h1 class="text-4xl font-bold mt-6">Oops, nyawa habis!</h1>
+                    <p class="text-gray-400 mt-2">Satu nyawa akan terisi kembali dalam:</p>
+                    <p id="heart-regen-timer" class="text-2xl font-bold my-4">--:--</p>
+                    <p class="text-gray-400">Atau, isi ulang sekarang!</p>
+                </div>
+                <div class="space-y-3">
+                    <button onclick="navigate('screen-purchase-hearts')" class="w-full bg-rose-500 text-white font-semibold py-4 rounded-lg text-lg">Isi Ulang Nyawa</button>
+                    <button onclick="goBack()" class="w-full bg-gray-700 text-white font-semibold py-3 rounded-lg">Nanti Saja</button>
+                </div>
+            </div>
+
+            <!-- PROFILE SUB-SCREENS -->
+            <div id="screen-purchase-hearts" class="app-screen bg-gray-900 p-6">
+                <button onclick="goBack()" class="absolute top-12 left-6 text-gray-400"><i data-lucide="arrow-left" class="w-6 h-6"></i></button>
+                <h2 class="text-3xl font-bold text-center mt-8 mb-6">Isi Ulang Nyawa</h2>
+                <div class="space-y-4">
+                    <div class="bg-gray-800 p-5 rounded-lg border-2 border-rose-500 text-center"><p class="text-lg font-bold">Isi Penuh (3 Nyawa)</p><p class="text-2xl font-bold text-rose-400 my-2">Rp 15.000</p><button onclick="navigateToPaymentSim('hearts-full')" class="w-full bg-rose-500 text-white font-semibold py-2 rounded-lg mt-2">Beli</button></div>
+                    <div class="bg-gray-800 p-5 rounded-lg border-2 border-gray-700 text-center"><p class="text-lg font-bold">1 Nyawa</p><p class="text-2xl font-bold text-rose-400 my-2">Rp 6.000</p><button onclick="navigateToPaymentSim('hearts-single')" class="w-full bg-rose-500 text-white font-semibold py-2 rounded-lg mt-2">Beli</button></div>
+                </div>
+            </div>
+            <div id="screen-purchase-premium" class="app-screen bg-gray-900 p-6">
+                <button onclick="goBack()" class="absolute top-12 left-6 text-gray-400"><i data-lucide="arrow-left" class="w-6 h-6"></i></button>
+                <div class="text-center mt-8"><i data-lucide="gem" class="w-16 h-16 text-cyan-400 mx-auto"></i><h2 class="text-3xl font-bold mt-4">BICARA+</h2></div>
+                <ul class="my-8 space-y-3 list-inside list-disc text-gray-300"><li><span class="font-semibold text-white">Nyawa Tanpa Batas:</span> Belajar sepuasnya tanpa khawatir kehabisan nyawa.</li><li><span class="font-semibold text-white">Bebas Iklan:</span> Pengalaman belajar yang fokus dan tanpa gangguan.</li><li><span class="font-semibold text-white">Akses Fitur Eksklusif:</span> Dapatkan akses pertama ke mode AR dan fitur premium lainnya.</li></ul>
+                <div class="bg-gray-800 p-5 rounded-lg border-2 border-cyan-500 text-center"><p class="text-lg font-bold">Langganan Bulanan</p><p class="text-2xl font-bold text-cyan-400 my-2">Rp 49.000 / bulan</p><button onclick="navigateToPaymentSim('premium')" class="w-full bg-cyan-500 text-white font-semibold py-2 rounded-lg mt-2">Berlangganan</button></div>
+            </div>
+             <div id="screen-edit-profile" class="app-screen bg-gray-900 p-8">
+                <button onclick="goBack()" class="absolute top-12 left-6 text-gray-400"><i data-lucide="arrow-left" class="w-6 h-6"></i></button>
+                <div class="flex-grow flex flex-col justify-center">
+                    <h2 class="text-3xl font-bold mb-6">Edit Profil</h2>
+                    <div class="text-center mb-6"><div class="w-24 h-24 bg-cyan-500 rounded-full flex items-center justify-center mx-auto mb-2"><i data-lucide="user-round" class="w-12 h-12"></i></div><button class="text-cyan-400 font-semibold text-sm">Ubah Foto</button></div>
+                    <div class="space-y-4">
+                        <input type="text" placeholder="Nama Lengkap" value="Pengguna Uji" class="w-full bg-gray-800 border-2 border-gray-700 rounded-lg py-3 px-4 focus:border-cyan-500 focus:outline-none">
+                        <input type="email" placeholder="Alamat Email" value="user@test.com" class="w-full bg-gray-800 border-2 border-gray-700 rounded-lg py-3 px-4 focus:border-cyan-500 focus:outline-none">
+                    </div>
+                    <button onclick="goBack()" class="w-full bg-cyan-500 text-white font-semibold py-3 rounded-lg mt-8">Simpan Perubahan</button>
+                </div>
+            </div>
+            
+            <!-- PAYMENT SIMULATION SCREENS -->
+            <div id="screen-payment-sim" class="app-screen bg-gray-900 p-6 flex flex-col">
+                <div class="flex-none"><button onclick="goBack()" class="absolute top-12 left-6 text-gray-400"><i data-lucide="arrow-left" class="w-6 h-6"></i></button></div>
+                <div class="flex-grow flex flex-col justify-center">
+                    <h2 class="text-3xl font-bold text-center mb-4">Konfirmasi Pembayaran</h2>
+                    <div class="bg-gray-800 p-4 rounded-lg mb-6">
+                        <div class="flex justify-between items-center text-gray-400"><span>Produk</span><span>Harga</span></div>
+                        <div class="flex justify-between items-center font-semibold mt-1"><span id="payment-product-name"></span><span id="payment-product-price"></span></div>
+                        <hr class="border-gray-700 my-3">
+                        <div class="flex justify-between items-center font-bold text-xl"><span>Total</span><span id="payment-total-price"></span></div>
+                    </div>
+                    <h3 class="text-lg font-semibold mb-3">Metode Pembayaran</h3>
+                    <div class="bg-gray-800 p-4 rounded-lg">
+                        <p class="font-semibold mb-3">Kartu Kredit / Debit</p>
+                        <div class="space-y-3">
+                            <input type="text" placeholder="Nomor Kartu" value="4111 1111 1111 1111" class="w-full bg-gray-700 border-2 border-gray-600 rounded-lg py-2 px-3 focus:border-cyan-500 focus:outline-none">
+                            <div class="flex gap-3">
+                                <input type="text" placeholder="MM/YY" value="12/28" class="w-1/2 bg-gray-700 border-2 border-gray-600 rounded-lg py-2 px-3 focus:border-cyan-500 focus:outline-none">
+                                <input type="text" placeholder="CVV" value="123" class="w-1/2 bg-gray-700 border-2 border-gray-600 rounded-lg py-2 px-3 focus:border-cyan-500 focus:outline-none">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex-none">
+                    <button id="pay-now-btn" onclick="handlePayment()" class="w-full bg-cyan-500 text-white font-semibold py-4 rounded-lg text-lg">
+                        Bayar Sekarang
+                    </button>
+                </div>
+            </div>
+
+            <div id="screen-payment-success" class="app-screen bg-gray-900 p-8 justify-between text-center">
+                <div class="flex-grow flex flex-col justify-center items-center">
+                    <i data-lucide="check-circle" class="w-32 h-32 text-green-400"></i>
+                    <h1 id="success-title" class="text-4xl font-bold mt-6"></h1>
+                    <p id="success-message-1" class="text-gray-400 mt-2"></p>
+                    <p id="success-message-2" class="text-gray-400"></p>
+                </div>
+                <button onclick="returnToApp()" class="w-full bg-cyan-500 text-white font-semibold py-4 rounded-lg text-lg">Kembali ke Aplikasi</button>
+            </div>
+
+
         </div>
     </div>
 
     <script>
         lucide.createIcons();
 
+        // --- STATE MANAGEMENT ---
         let mockUserData = { "user@test.com": "password123" };
         let navigationStack = ['screen-splash'];
         let learningPathData;
         let currentLessonState = {};
         let matchState = {};
+        let isPremiumUser = false;
+        let currentPurchase = null;
+        const products = {
+            'premium': { name: 'BICARA+ (Bulanan)', price: 'Rp 49.000' },
+            'hearts-full': { name: 'Isi Penuh (3 Nyawa)', price: 'Rp 15.000' },
+            'hearts-single': { name: '1 Nyawa', price: 'Rp 6.000' }
+        };
+        let currentText = "Hasil terjemahan...";
+        const sampleWords = ["Halo", "nama", "saya", "BICARA", "apa", "kabar", "Anda", "terima kasih", "maaf"];
 
+        // --- HEARTS SYSTEM STATE ---
+        let userHearts = 3;
+        const maxHearts = 3;
+        const heartRegenTime = 3600 * 1000; // 1 jam dalam milidetik
+        let nextHeartTimestamp = 0;
+        let heartTimerInterval;
+
+        // --- INITIALIZATION ---
         setTimeout(() => navigate('screen-welcome'), 1500);
         
+        // --- NAVIGATION ---
         function navigate(screenId) {
             const currentScreenId = navigationStack[navigationStack.length - 1];
             const currentScreenEl = document.getElementById(currentScreenId);
@@ -200,6 +332,8 @@
             nextScreenEl.classList.remove('exit-left', 'active');
             setTimeout(() => nextScreenEl.classList.add('active'), 50);
             navigationStack.push(screenId);
+
+            setTimeout(() => lucide.createIcons(), 50);
         }
 
         function goBack() {
@@ -215,22 +349,38 @@
             prevScreenEl.classList.add('active');
         }
 
+        // --- AUTH & ONBOARDING ---
         function handleSignUp() {
             const email = document.getElementById('signup-email').value;
             if (!email || !document.getElementById('signup-password').value) { alert('Email dan kata sandi tidak boleh kosong'); return; }
             navigate('screen-verify');
             setTimeout(() => navigate('screen-role'), 2500);
         }
+
         function handleLogin() {
             const email = document.getElementById('login-email').value;
             const pass = document.getElementById('login-password').value;
             if (mockUserData[email] && mockUserData[email] === pass) {
                 initializeLearningData();
                 navigate('screen-main-app');
-                switchTab('learn'); // Default to learn tab after login
+                switchTab('learn');
             } else {
                 alert('Email atau kata sandi salah!');
             }
+        }
+
+        function handleForgotPassword() {
+            const email = document.getElementById('forgot-email').value;
+            if (!email) {
+                alert('Silakan masukkan alamat email Anda.');
+                return;
+            }
+            navigate('screen-forgot-password-sent');
+
+            setTimeout(() => {
+                goBack(); // to forgot-password screen
+                goBack(); // to login screen
+            }, 3000);
         }
         
         document.getElementById('screen-role').innerHTML = `<h2 class="text-3xl font-bold text-center mb-2">Saya seorang...</h2><p class="text-gray-400 text-center mb-8">Pilihan ini akan menyesuaikan pengalaman Anda.</p><div class="space-y-4"><button onclick="navigate('screen-stats-1')" class="w-full bg-gray-800 p-6 rounded-lg text-left text-lg font-semibold flex items-center"><i data-lucide="user-round" class="w-8 h-8 mr-4 text-cyan-400"></i> Siswa Tuli / Bisu</button><button onclick="navigate('screen-stats-1')" class="w-full bg-gray-800 p-6 rounded-lg text-left text-lg font-semibold flex items-center"><i data-lucide="school" class="w-8 h-8 mr-4 text-cyan-400"></i> Guru / Dosen</button></div>`;
@@ -238,8 +388,15 @@
         document.getElementById('screen-stats-3').innerHTML = `<button onclick="goBack()" class="absolute top-12 left-6 text-gray-400"><i data-lucide="arrow-left"></i></button><h2 class="text-3xl font-bold mb-2">Pengalaman Anda</h2><p class="text-gray-500 mb-8">(Untuk Tujuan Statistik)</p><label class="font-semibold">Alat bantu utama Anda sebelum ini?</label><select class="w-full bg-gray-800 border-2 border-gray-700 rounded-lg py-3 px-4 mt-2"><option>Juru Bahasa Isyarat</option><option>Menulis di ponsel/kertas</option><option>Bantuan Teman</option><option>Tidak Ada</option></select><button onclick="navigate('screen-language')" class="w-full bg-cyan-500 text-white font-semibold py-3 rounded-lg mt-8">Selesai & Lanjut</button>`;
         function finishOnboarding() { initializeLearningData(); navigate('screen-main-app'); switchTab('learn'); }
 
+        // --- MAIN APP ---
         function initializeLearningData() {
-            learningPathData = [ { title: "Unit 1: Perkenalan Diri", lessons: [ { name: "Salam", status: "active", icon: "hand", questions: [ { type: 'choice', question: "Pilih isyarat untuk 'Halo'", imageIcon: 'hand', options: ['Halo', 'Terima Kasih', 'Maaf'], correct: 'Halo' }, { type: 'match', question: "Cocokkan Kata", pairs: {'Senang': 'smile', 'Sedih': 'frown', 'Marah': 'angry'} }, { type: 'choice', question: "Isyarat ini berarti...", imageIcon: 'user-round', options: ['Kamu', 'Saya', 'Dia'], correct: 'Saya' }, ]}, { name: "Nama", status: "locked", icon: "user-round", questions: [] }, ] }, { title: "Unit 2: Aktivitas Harian", lessons: [ { name: "Makan", status: "locked", icon: "utensils", questions: [] } ] } ];
+            learningPathData = [ { title: "Unit 1: Perkenalan Diri", lessons: [ { name: "Salam", status: "active", icon: "hand", questions: [ 
+                { type: 'choice', question: "Pilih isyarat untuk 'Halo'", imageIcon: 'hand', options: ['Halo', 'Terima Kasih', 'Maaf'], correct: 'Halo' }, 
+                { type: 'gesture', question: "Tirukan isyarat untuk 'Halo'", correct: 'Halo' },
+                { type: 'match', question: "Cocokkan Kata", pairs: {'Senang': 'smile', 'Sedih': 'frown', 'Marah': 'angry'} }, 
+                { type: 'choice', question: "Isyarat ini berarti...", imageIcon: 'user-round', options: ['Kamu', 'Saya', 'Dia'], correct: 'Saya' }, 
+            ]}, { name: "Nama", status: "locked", icon: "user-round", questions: [] }, ] }, { title: "Unit 2: Aktivitas Harian", lessons: [ { name: "Makan", status: "locked", icon: "utensils", questions: [] } ] } ];
+            updateMainHeartCount();
         }
         
         function switchTab(tabName) {
@@ -263,7 +420,46 @@
 
         function renderProfileScreen() {
             const container = document.getElementById('screen-profile');
-            container.innerHTML = `<h2 class="text-3xl font-bold mb-6">Profil & Pengaturan</h2><div class="flex items-center bg-gray-800 p-4 rounded-lg mb-6"><div class="w-16 h-16 bg-cyan-500 rounded-full flex items-center justify-center mr-4"><i data-lucide="user-round" class="w-8 h-8"></i></div><div><h3 class="text-xl font-semibold">Pengguna Uji</h3><p class="text-sm text-gray-400">user@test.com</p></div></div><div class="space-y-2"><a href="#" class="flex items-center justify-between bg-gray-800 p-4 rounded-lg"><div class="flex items-center"><i data-lucide="gem" class="w-5 h-5 mr-3 text-cyan-400"></i>Kelola Langganan BICARA+</div><i data-lucide="chevron-right" class="w-5 h-5 text-gray-500"></i></a><a href="#" class="flex items-center justify-between bg-gray-800 p-4 rounded-lg"><div class="flex items-center"><i data-lucide="scan-face" class="w-5 h-5 mr-3 text-cyan-400"></i>Kalibrasi Ulang</div><i data-lucide="chevron-right" class="w-5 h-5 text-gray-500"></i></a><a onclick="navigate('screen-welcome')" class="flex items-center justify-between bg-gray-800 p-4 rounded-lg mt-4 cursor-pointer"><div class="flex items-center text-red-400"><i data-lucide="log-out" class="w-5 h-5 mr-3"></i>Keluar</div></a></div>`;
+            let premiumContent = `
+                <button onclick="navigateToPaymentSim('premium')" class="w-full flex items-center justify-between bg-gray-800 p-4 rounded-lg">
+                    <div class="flex items-center"><i data-lucide="gem" class="w-5 h-5 mr-3 text-cyan-400"></i>Kelola Langganan BICARA+</div>
+                    <i data-lucide="chevron-right" class="w-5 h-5 text-gray-500"></i>
+                </button>`;
+            
+            if (isPremiumUser) {
+                premiumContent = `
+                <div class="w-full flex items-center justify-between bg-gray-800 p-4 rounded-lg">
+                    <div class="flex items-center"><i data-lucide="gem" class="w-5 h-5 mr-3 text-yellow-400"></i>Anda adalah anggota BICARA+</div>
+                    <i data-lucide="check-circle" class="w-5 h-5 text-green-400"></i>
+                </div>`;
+            }
+
+            container.innerHTML = `
+                <h2 class="text-3xl font-bold mb-6">Profil & Pengaturan</h2>
+                <div class="flex items-center bg-gray-800 p-4 rounded-lg mb-6">
+                    <div class="w-16 h-16 bg-cyan-500 rounded-full flex items-center justify-center mr-4">
+                        <i data-lucide="user-round" class="w-8 h-8"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-semibold">Pengguna Uji</h3>
+                        <p class="text-sm text-gray-400">user@test.com</p>
+                    </div>
+                    <button onclick="navigate('screen-edit-profile')" class="ml-auto text-cyan-400 font-semibold">Edit</button>
+                </div>
+                <div class="space-y-2">
+                    ${premiumContent}
+                    <button onclick="navigate('screen-purchase-hearts')" class="w-full flex items-center justify-between bg-gray-800 p-4 rounded-lg">
+                        <div class="flex items-center"><i data-lucide="heart" class="w-5 h-5 mr-3 text-rose-500"></i>Beli Nyawa</div>
+                        <i data-lucide="chevron-right" class="w-5 h-5 text-gray-500"></i>
+                    </button>
+                    <button onclick="navigate('screen-calibration-intro')" class="w-full flex items-center justify-between bg-gray-800 p-4 rounded-lg">
+                        <div class="flex items-center"><i data-lucide="scan-face" class="w-5 h-5 mr-3 text-cyan-400"></i>Kalibrasi Ulang</div>
+                        <i data-lucide="chevron-right" class="w-5 h-5 text-gray-500"></i>
+                    </button>
+                    <button onclick="navigate('screen-welcome')" class="w-full flex items-center justify-between bg-gray-800 p-4 rounded-lg mt-4 cursor-pointer">
+                        <div class="flex items-center text-red-400"><i data-lucide="log-out" class="w-5 h-5 mr-3"></i>Keluar</div>
+                    </button>
+                </div>`;
             lucide.createIcons();
         }
 
@@ -274,17 +470,101 @@
             } else if (mode === 'ar') {
                 content = `<div class="h-full flex flex-col bg-gray-700 items-center justify-center relative"><i data-lucide="camera" class="w-32 h-32 text-gray-500"></i><div class="absolute bottom-10 left-4 right-4 p-3 bg-black/60 rounded-lg text-center text-xl">Subtitle AR akan muncul di sini</div><button onclick="renderTranslateScreen('default')" class="absolute top-12 left-6 p-2 bg-black/50 rounded-full"><i data-lucide="x"></i></button></div>`;
             } else {
-                content = `<div class="h-full flex flex-col"><div class="flex-grow bg-gray-700 relative flex items-center justify-center"><i data-lucide="video" class="w-24 h-24 text-gray-500"></i><div class="absolute top-4 right-4 flex space-x-2"><button onclick="renderTranslateScreen('conversation')" class="bg-black/50 p-2 rounded-full"><i data-lucide="users"></i></button><button onclick="renderTranslateScreen('ar')" class="bg-black/50 p-2 rounded-full"><i data-lucide="box"></i></button></div><div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent"><div class="bg-black/50 p-4 rounded-lg"><p class="text-xl text-gray-300">Hasil terjemahan...</p></div></div></div><div class="p-4 bg-gray-900 flex items-center"><p class="text-sm text-gray-400 flex-grow">Mode: Komunikasi Langsung</p><button class="bg-cyan-500 p-3 rounded-full"><i data-lucide="mic" class="w-6 h-6"></i></button></div></div>`;
+                content = `<div class="h-full flex flex-col">
+                    <div class="flex-grow bg-gray-700 relative flex items-center justify-center">
+                        <i data-lucide="video" class="w-24 h-24 text-gray-500"></i>
+                        <div class="absolute top-4 right-4 flex space-x-2">
+                            <button onclick="renderTranslateScreen('conversation')" class="bg-black/50 p-2 rounded-full"><i data-lucide="users"></i></button>
+                            <button onclick="renderTranslateScreen('ar')" class="bg-black/50 p-2 rounded-full"><i data-lucide="box"></i></button>
+                        </div>
+                        <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+                            <div class="bg-black/50 p-4 rounded-lg">
+                                <p id="translated-text" class="text-xl text-gray-300 min-h-[2.5rem]">${currentText}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-4 bg-gray-900 flex flex-col gap-3">
+                        <div class="flex justify-center gap-3">
+                            <button onclick="clearText()" class="bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg flex-grow">Hapus Semua</button>
+                            <button onclick="addSpace()" class="bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg flex-grow">Spasi</button>
+                            <button onclick="deleteLast()" class="bg-gray-700 text-white p-2 px-4 rounded-lg"><i data-lucide="delete" class="w-6 h-6"></i></button>
+                        </div>
+                        <div class="flex items-center justify-center">
+                            <button onclick="simulateTranslation()" class="bg-cyan-500 p-4 rounded-full"><i data-lucide="mic" class="w-8 h-8"></i></button>
+                        </div>
+                    </div>
+                </div>`;
             }
             document.getElementById('screen-translate-container').innerHTML = content;
             lucide.createIcons();
         }
 
+        // --- HEARTS SYSTEM LOGIC ---
+        function updateMainHeartCount() { document.getElementById('main-heart-count').textContent = userHearts; }
+        
+        function updateHeartDisplay() {
+            const container = document.getElementById('lesson-hearts');
+            container.innerHTML = '';
+            for (let i = 0; i < maxHearts; i++) {
+                const heartClass = i < userHearts ? 'filled' : 'empty';
+                container.innerHTML += `<i data-lucide="heart" class="w-6 h-6 heart-icon ${heartClass}"></i>`;
+            }
+            lucide.createIcons();
+            updateMainHeartCount();
+        }
+
+        function loseHeart() {
+            if (userHearts > 0) {
+                userHearts--;
+                updateHeartDisplay();
+                if (userHearts < maxHearts && !heartTimerInterval) {
+                    nextHeartTimestamp = Date.now() + heartRegenTime;
+                    startHeartRegenTimer();
+                }
+            }
+        }
+
+        function startHeartRegenTimer() {
+            if (heartTimerInterval) clearInterval(heartTimerInterval);
+            heartTimerInterval = setInterval(updateHeartTimer, 1000);
+            updateHeartTimer();
+        }
+
+        function updateHeartTimer() {
+            if (userHearts >= maxHearts) {
+                clearInterval(heartTimerInterval);
+                heartTimerInterval = null;
+                document.getElementById('heart-regen-timer').textContent = "Penuh!";
+                return;
+            }
+
+            const now = Date.now();
+            if (now >= nextHeartTimestamp) {
+                userHearts++;
+                updateHeartDisplay();
+                if (userHearts < maxHearts) {
+                    nextHeartTimestamp = now + heartRegenTime;
+                } else {
+                    nextHeartTimestamp = 0;
+                }
+            }
+            
+            const remaining = nextHeartTimestamp > 0 ? nextHeartTimestamp - now : 0;
+            const minutes = Math.floor((remaining / 1000 / 60) % 60);
+            const seconds = Math.floor((remaining / 1000) % 60);
+            document.getElementById('heart-regen-timer').textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+        
+        // --- LEARNING PATH & LESSONS ---
         function renderLearningPath() {
             const container = document.getElementById('learning-path-container');
-            container.innerHTML = '';
+            container.innerHTML = ''; // Clear container once at the start
             learningPathData.forEach((unit, unitIndex) => {
-                container.innerHTML += `<div class="bg-cyan-800 text-white font-bold p-3 rounded-lg text-center mb-8">${unit.title}</div>`;
+                const titleEl = document.createElement('div');
+                titleEl.className = 'bg-cyan-800 text-white font-bold p-3 rounded-lg text-center mb-8';
+                titleEl.textContent = unit.title;
+                container.appendChild(titleEl);
+
                 const path = document.createElement('div');
                 path.className = 'relative flex flex-col items-center space-y-4 learning-path pb-8';
                 unit.lessons.forEach((lesson, lessonIndex) => {
@@ -319,9 +599,15 @@
         }
         
         function startLesson(unitIndex, lessonIndex) {
+            if (userHearts <= 0 && !isPremiumUser) {
+                navigate('screen-no-lives');
+                startHeartRegenTimer();
+                return;
+            }
             currentLessonState = { unit: unitIndex, lesson: lessonIndex, question: 0, selectedAnswer: null };
             navigate('screen-lesson');
             renderQuestion();
+            updateHeartDisplay();
         }
 
         function renderQuestion() {
@@ -331,8 +617,7 @@
             
             ['feedback-correct', 'feedback-incorrect'].forEach(id => document.getElementById(id).classList.add('hidden'));
             document.getElementById('check-button-container').classList.remove('hidden');
-            document.getElementById('check-answer-btn').disabled = true;
-            document.getElementById('check-answer-btn').className = "w-full bg-gray-500 text-gray-300 font-bold py-4 rounded-lg text-lg cursor-not-allowed";
+            document.getElementById('check-button-container').innerHTML = `<button id="check-answer-btn" onclick="checkAnswer()" class="w-full bg-gray-500 text-gray-300 font-bold py-4 rounded-lg text-lg cursor-not-allowed" disabled>PERIKSA</button>`;
 
             const totalQuestions = learningPathData[unit].lessons[lesson].questions.length;
             document.getElementById('lesson-progress-bar').style.width = `${((question) / totalQuestions) * 100}%`;
@@ -352,9 +637,40 @@
                 html += `<div class="space-y-3">${keys.map(k => `<button onclick="selectMatch(this, '${k}', 'key')" class="w-full bg-gray-800 border-2 border-gray-700 p-4 rounded-lg text-lg font-semibold match-item" data-key="${k}">${k}</button>`).join('')}</div>`;
                 html += `<div class="space-y-3">${values.map(v => `<button onclick="selectMatch(this, '${v}', 'value')" class="w-full bg-gray-800 border-2 border-gray-700 p-4 rounded-lg text-lg font-semibold match-item flex items-center justify-center" data-value="${v}"><i data-lucide="${v}" class="w-8 h-8"></i></button>`).join('')}</div>`;
                 html += `</div>`;
+            } else if (questionData.type === 'gesture') {
+                html += `
+                <div class="w-full aspect-video bg-gray-800 rounded-lg relative overflow-hidden flex items-center justify-center mb-6 border-2 border-gray-700">
+                    <i data-lucide="user-round" class="w-24 h-24 text-gray-600"></i>
+                    <div id="gesture-feedback" class="absolute inset-0 flex-col gap-4 items-center justify-center bg-black/70 hidden">
+                        <i id="gesture-loader" data-lucide="scan" class="w-16 h-16 text-cyan-400 animate-pulse"></i>
+                        <p class="text-lg font-semibold text-cyan-300">Menganalisis Gerakan...</p>
+                    </div>
+                    <div class="absolute inset-0 border-4 border-dashed border-gray-600 rounded-lg"></div>
+                </div>
+                <p class="text-gray-400 text-center mb-4">Posisikan diri Anda di dalam bingkai dan bersiaplah.</p>
+                `;
+                document.getElementById('check-button-container').innerHTML = `<button id="start-gesture-btn" onclick="startGestureDemo()" class="w-full bg-cyan-500 text-white font-bold py-4 rounded-lg text-lg">MULAI GESTUR</button>`;
             }
+
             contentEl.innerHTML = html;
             lucide.createIcons();
+        }
+
+        function startGestureDemo() {
+            const startBtn = document.getElementById('start-gesture-btn');
+            const feedbackEl = document.getElementById('gesture-feedback');
+            if (!startBtn || !feedbackEl) return;
+
+            startBtn.disabled = true;
+            startBtn.classList.replace('bg-cyan-500', 'bg-gray-600');
+            startBtn.textContent = 'MENGANALISIS...';
+            
+            feedbackEl.classList.remove('hidden');
+            feedbackEl.style.display = 'flex';
+
+            setTimeout(() => {
+                checkAnswer();
+            }, 3000);
         }
         
         function selectAnswer(btnEl, answer) {
@@ -413,7 +729,7 @@
                 }
             }
         }
-
+        
         function checkAnswer() {
             const { unit, lesson, question, selectedAnswer } = currentLessonState;
             const questionData = learningPathData[unit].lessons[lesson].questions[question];
@@ -423,12 +739,15 @@
                 isCorrect = selectedAnswer === questionData.correct;
             } else if (questionData.type === 'match') {
                 isCorrect = matchState.pairs === matchState.totalPairs;
+            } else if (questionData.type === 'gesture') {
+                isCorrect = true; // For demo purposes, gesture is always correct
             }
             
             document.getElementById('check-button-container').classList.add('hidden');
             if (isCorrect) {
                 document.getElementById('feedback-correct').classList.remove('hidden');
             } else {
+                if (!isPremiumUser) loseHeart();
                 if(questionData.correct) {
                     document.getElementById('incorrect-answer-text').textContent = `Jawaban Tepat: ${questionData.correct}`;
                 } else {
@@ -441,6 +760,10 @@
         }
         
         function nextQuestion() {
+            if (userHearts <= 0 && !isPremiumUser) {
+                navigate('screen-no-lives');
+                return;
+            }
             const { unit, lesson } = currentLessonState;
             const totalQuestions = learningPathData[unit].lessons[lesson].questions.length;
             if (currentLessonState.question + 1 < totalQuestions) {
@@ -449,6 +772,27 @@
             } else {
                 lessonComplete();
             }
+        }
+
+        function goToAcademy() {
+            const currentScreenId = navigationStack[navigationStack.length - 1];
+            const currentScreenEl = document.getElementById(currentScreenId);
+            
+            const mainAppIndex = navigationStack.lastIndexOf('screen-main-app');
+            if (mainAppIndex > -1) {
+                navigationStack.splice(mainAppIndex + 1);
+            }
+
+            const prevScreenId = 'screen-main-app';
+            const prevScreenEl = document.getElementById(prevScreenId);
+            
+            currentScreenEl.classList.remove('active');
+            currentScreenEl.classList.add('exit-left');
+            setTimeout(() => currentScreenEl.classList.remove('exit-left'), 350);
+            prevScreenEl.classList.remove('exit-left');
+            prevScreenEl.classList.add('active');
+
+            switchTab('learn');
         }
 
         function lessonComplete() {
@@ -461,7 +805,129 @@
             }
             navigate('screen-lesson-complete');
         }
+        
+        // --- PAYMENT SIMULATION ---
+        function navigateToPaymentSim(productId) {
+            currentPurchase = productId;
+            const product = products[productId];
 
+            document.getElementById('payment-product-name').textContent = product.name;
+            document.getElementById('payment-product-price').textContent = product.price;
+            document.getElementById('payment-total-price').textContent = product.price;
+
+            navigate('screen-payment-sim');
+        }
+
+        function handlePayment() {
+            const payBtn = document.getElementById('pay-now-btn');
+            payBtn.disabled = true;
+            payBtn.innerHTML = `<i data-lucide="loader-2" class="w-6 h-6 mx-auto animate-spin"></i>`;
+            lucide.createIcons();
+            
+            setTimeout(() => {
+                const successTitle = document.getElementById('success-title');
+                const msg1 = document.getElementById('success-message-1');
+                const msg2 = document.getElementById('success-message-2');
+
+                switch(currentPurchase) {
+                    case 'premium':
+                        isPremiumUser = true;
+                        successTitle.textContent = 'Pembayaran Berhasil!';
+                        msg1.textContent = 'Selamat! Anda sekarang adalah anggota BICARA+.';
+                        msg2.textContent = 'Nikmati semua fitur premium tanpa batas.';
+                        break;
+                    case 'hearts-full':
+                        userHearts = maxHearts;
+                        successTitle.textContent = 'Isi Ulang Berhasil!';
+                        msg1.textContent = 'Nyawa Anda telah terisi penuh.';
+                        msg2.textContent = 'Selamat melanjutkan pelajaran!';
+                        break;
+                    case 'hearts-single':
+                        userHearts = Math.min(maxHearts, userHearts + 1);
+                        successTitle.textContent = 'Isi Ulang Berhasil!';
+                        msg1.textContent = 'Anda telah menerima 1 nyawa tambahan.';
+                        msg2.textContent = 'Selamat melanjutkan pelajaran!';
+                        break;
+                }
+
+                updateMainHeartCount();
+                navigate('screen-payment-success');
+                payBtn.disabled = false; // Reset button state
+                payBtn.innerHTML = 'Bayar Sekarang';
+
+            }, 2500);
+        }
+
+        function returnToApp() {
+            const currentScreenId = navigationStack[navigationStack.length - 1];
+            const currentScreenEl = document.getElementById(currentScreenId);
+            
+            const mainAppIndex = navigationStack.lastIndexOf('screen-main-app');
+            if (mainAppIndex > -1) {
+                navigationStack.splice(mainAppIndex + 1);
+            } else {
+                navigationStack = ['screen-splash', 'screen-welcome', 'screen-main-app'];
+            }
+
+            const prevScreenId = 'screen-main-app';
+            const prevScreenEl = document.getElementById(prevScreenId);
+            
+            currentScreenEl.classList.remove('active');
+            currentScreenEl.classList.add('exit-left');
+            setTimeout(() => {
+                document.querySelectorAll('.app-screen').forEach(el => {
+                    if(el.id !== prevScreenId) {
+                        el.classList.remove('active', 'exit-left');
+                    }
+                });
+            }, 350);
+
+            prevScreenEl.classList.remove('exit-left');
+            prevScreenEl.classList.add('active');
+
+            // Go to learn tab if hearts were bought, otherwise profile
+            const targetTab = currentPurchase && currentPurchase.includes('hearts') ? 'learn' : 'profile';
+            switchTab(targetTab);
+        }
+
+        // --- TRANSLATOR FUNCTIONS ---
+        function simulateTranslation() {
+            const textEl = document.getElementById('translated-text');
+            if (textEl) {
+                if (currentText === "Hasil terjemahan...") {
+                    currentText = "";
+                }
+                const randomWord = sampleWords[Math.floor(Math.random() * sampleWords.length)];
+                currentText = (currentText + " " + randomWord).trim();
+                textEl.textContent = currentText;
+            }
+        }
+
+        function clearText() {
+            const textEl = document.getElementById('translated-text');
+            if (textEl) {
+                currentText = "";
+                textEl.textContent = " "; // Use a space to maintain height
+            }
+        }
+
+        function addSpace() {
+            const textEl = document.getElementById('translated-text');
+            if (textEl) {
+                if (currentText.slice(-1) !== " " && currentText !== "") {
+                    currentText += " ";
+                }
+                textEl.textContent = currentText.length > 0 ? currentText : " ";
+            }
+        }
+
+        function deleteLast() {
+            const textEl = document.getElementById('translated-text');
+            if (textEl && currentText.length > 0) {
+                currentText = currentText.slice(0, -1);
+                textEl.textContent = currentText.length > 0 ? currentText : " "; 
+            }
+        }
     </script>
 </body>
 </html>
